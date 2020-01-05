@@ -1,0 +1,1 @@
+Allows you to use the paste command in MAS by using the CTRL + V shortcut.
