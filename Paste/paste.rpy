@@ -1,5 +1,7 @@
 init 1 python:
     config.keymap['input_paste'] = ['ctrl_K_v']
+    config.keymap['input_copy'] = ['ctrl_K_c']
+    config.keymap['input_cut'] = ['ctrl_K_x']
 
 init 999 python:
 
@@ -68,6 +70,20 @@ init 999 python:
             self.caret_pos += len(pygame.scrap.get(pygame.SCRAP_TEXT))
             self.update_text(content, self.editable, check_size=True)
 
+            renpy.display.render.redraw(self, 0)
+            raise renpy.display.core.IgnoreEvent()
+            
+        elif map_event(ev, "input_copy"):
+            import pyperclip
+            pyperclip.copy(self.content)
+            
+            renpy.display.render.redraw(self, 0)
+            raise renpy.display.core.IgnoreEvent()
+            
+        elif map_event(ev, "input_cut"):
+            import pyperclip
+            pyperclip.copy(self.content)
+            self.update_text("", self.editable)
             renpy.display.render.redraw(self, 0)
             raise renpy.display.core.IgnoreEvent()
 
