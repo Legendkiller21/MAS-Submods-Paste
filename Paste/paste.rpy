@@ -1,5 +1,5 @@
 # Original Paste code and Sub-Selections v2 by LegendKiller21
-# Copy, Cut, Select All, and Original Markers for Sub-Selections by LordBaaa
+# Copy, Cut, Select All, and Original Markers for Sub-Selections and Sub-Selections v2 optimizations by LordBaaa
 
 init 1 python:
     config.keymap['input_paste'] = ['ctrl_K_v']
@@ -28,11 +28,10 @@ init 999 python:
     def class_Input_remove_marker_text(self, content):
         """
         Removes selection Marker text
-
         IN:
         content: 
         type(str/unicode)
-
+        
         OUT:
         content:
         string that has start and end marker text removed
@@ -58,12 +57,113 @@ init 999 python:
 
         #Update Display
         self.update_text(content_removed_markers, self.editable, check_size=True)
+    #Input Class new Functions
+    
+    def class_Input_process_set_marker_pos(self, text_mode, pos_mode):
+        """
+        Adjusts marker text and marker set postions
+ 
+        IN:
+        string: string
+        String to have operations done on it
+        
+        text_mode: int
+        Changes what marker text and actual postion is is affected 
+        
+        pos_mode: int
+        Gets the value of postion to be affected and what operation is done to it.
+        
+        OUT:
+        content: string
+        processed content 
+        """
+        marker_text = [self.start_marker_text, self.end_marker_text]
+        marker_postion = [self.start_marker_pos, self.end_marker_pos]
+        marker_offset = [-1, 1]
+        
+        content = list(self.content.replace(marker_text[text_mode],""))
+        content.insert(marker_postion[text_mode] + marker_offset[pos_mode], marker_text[text_mode])
+        
+        if text_mode == 0:
+            self.start_marker_pos += marker_offset[pos_mode]
+         
+        elif text_mode == 1:
+            self.end_marker_pos += marker_offset[pos_mode]
+
+        return content
+
+     
+    def class_Input_marker_set_else_code(self, mode):
+        """
+        IN:
+        mode: int
+        picks start and end int_lits
+        """
+        mode = int(mode)
+        start_int_list = [-1, 0]
+        end_int_list = [1, 2]
+        if self.end_marker_is_set and self.caret_pos > self.end_marker_pos:
+            self.caret_pos -=2
+        elif self.end_marker_is_set and self.start_marker_pos < self.caret_pos < self.end_marker_pos:
+            self.caret_pos -=1
+        content = list(self.remove_marker_text(self.content))
+
+        self.start_marker_pos = self.caret_pos + start_int_list[mode]
+        content.insert(self.caret_pos + start_int_list[mode], self.start_marker_text)
+        self.start_marker_is_set = True    
+            
+        self.end_marker_pos = self.caret_pos + end_int_list[mode]
+        content.insert(self.caret_pos + end_int_list[mode], self.end_marker_text)
+        self.end_marker_is_set = True
+
+        return content
+        
+    def class_Input_copy_function(self, content, cut = False):
+        """
+        Copies/Cuts content of the console input
+        
+        content: string
+        String to be processed
+        cut: bool
+        Sets if code will just cut or just copy
+        """
+        if self.start_marker_is_set and self.end_marker_is_set:
+                    
+            #Makes sure Start Marker is before End Marker
+            if self.end_marker_pos > self.start_marker_pos:
+
+                #Removes Markers and copies to clipboard
+                content_removed_markers = self.remove_marker_text(self.content)
+                copy_content = content_removed_markers[self.start_marker_pos : self.end_marker_pos-1]
+                pygame.scrap.put(pygame.SCRAP_TEXT,copy_content)
+                if cut: 
+                    #Removes cut content from string that will be sent to the screen
+                    cut_content = "{0}{1}{2}".format(content_removed_markers[0:self.start_marker_pos], "", content_removed_markers[self.end_marker_pos-1:len(content_removed_markers)])
+
+                    #Update Display
+                    self.caret_pos = self.start_marker_pos
+                    self.update_text(cut_content, self.editable, check_size=True)
+
+                else:
+                    #Update Display
+                    self.update_text(content_removed_markers, self.editable, check_size=True)
+                    #Reset
+                    self.reset_marker_values()
+        else:
+            self.reset_screen_markers()
+            
+        #Finish Updating Display
+        renpy.display.render.redraw(self, 0)
+        raise renpy.display.core.IgnoreEvent()
 
     #Adds fuctions to Input Class
     setattr(renpy.display.behavior.Input, 'remove_marker_text', class_Input_remove_marker_text)
     setattr(renpy.display.behavior.Input, 'reset_marker_values', class_Input_reset_marker_values)
     setattr(renpy.display.behavior.Input, 'reset_screen_markers', class_Input_reset_screen_markers)
-
+    setattr(renpy.display.behavior.Input, 'process_set_marker_pos', class_Input_process_set_marker_pos)
+    setattr(renpy.display.behavior.Input, 'marker_set_else_code', class_Input_marker_set_else_code)
+    setattr(renpy.display.behavior.Input, 'copy_function', class_Input_copy_function)
+    
     map_event = renpy.display.behavior.map_event
 
     def event_ov(self, ev, x, y, st):
@@ -167,113 +267,40 @@ init 999 python:
             raise renpy.display.core.IgnoreEvent()
 
         elif map_event(ev, "input_copy"):
-        
-            #Checks if one of the Markers are set
-            if self.start_marker_is_set or self.end_marker_is_set:
-            
-                #Makes sure both Markers are set
-                if self.start_marker_is_set and self.end_marker_is_set:
-            
-                    #Makes sure Start Marker is before End Marker
-                    if self.end_marker_pos > self.start_marker_pos:
-            
-                        #Removes Markers and copies to clipboard
-                        content_removed_markers = self.remove_marker_text(self.content)
-                        copy_content = content_removed_markers[self.start_marker_pos : self.end_marker_pos-1]
-                        pygame.scrap.put(pygame.SCRAP_TEXT,copy_content)
-                 
-                        #Update Display
-                        self.update_text(content_removed_markers, self.editable, check_size=True)
-
-                        #Reset
-                        self.reset_marker_values()
-                    #If Start Marker is after End Marker Reset Screen
-                    else:
-                        self.reset_screen_markers()
-                else:
-                    self.reset_screen_markers()
-
-            #Finish Updating Display
-            renpy.display.render.redraw(self, 0)
-            raise renpy.display.core.IgnoreEvent()
+            self.copy_function(self.content)
             
         elif map_event(ev, "input_cut"):
-
-            #Checks if one of the Markers are set
-            if self.start_marker_is_set or self.end_marker_is_set:
-
-                #Makes sure both Markers are set
-                if self.start_marker_is_set and self.end_marker_is_set:
-
-                    #Makes sure Start Marker is before End Marker
-                    if self.end_marker_pos > self.start_marker_pos:
-
-                        #Removes Markers and copies to clipboard
-                        content_removed_markers = self.remove_marker_text(self.content)
-                        cut_content = "{0}{1}{2}".format(content_removed_markers[0:self.start_marker_pos], "", content_removed_markers[self.end_marker_pos-1:l])
-                        copy_content = content_removed_markers[self.start_marker_pos : self.end_marker_pos-1]
-                        pygame.scrap.put(pygame.SCRAP_TEXT, copy_content)
-
-                        #Reset
-                        self.caret_pos = self.start_marker_pos
-                        self.reset_marker_values()
-
-                        #Updates Display
-                        self.update_text(cut_content, self.editable)
-                    #If Start Marker is after End Marker Reset Screen
-                    else:
-                        self.reset_screen_markers()
-                else:
-                    self.reset_screen_markers()
-
-            #Finish Updating Display
-            renpy.display.render.redraw(self, 0)
-            raise renpy.display.core.IgnoreEvent()
+            self.copy_function(self.content, True)
 
 
         elif map_event(ev, "input_move_start_marker_pos"):
             #shift left
             if self.content and self.caret_pos > 0:
-
+                
+                #Checks that the start and end Markers have been set and checks if the current caret_pos is either the start/end marker postion
                 if (
                     self.start_marker_is_set and self.end_marker_is_set
                     and (self.caret_pos == self.end_marker_pos
                         or self.caret_pos == self.start_marker_pos
                     )
                 ):
+                    #If caret is at that start postion
                     if self.caret_pos == self.start_marker_pos:
-                        content = list(self.content.replace(self.start_marker_text,""))
-                        content.insert(self.start_marker_pos-1, self.start_marker_text)
-                        self.start_marker_pos -= 1
-
+                        content = self.process_set_marker_pos(0,0)
+                        
                     elif self.caret_pos == self.end_marker_pos:
-                        content = list(self.content.replace(self.end_marker_text,""))
-                        content.insert(self.end_marker_pos-1, self.end_marker_text)
-                        self.end_marker_pos -= 1
-
+                        content = self.process_set_marker_pos(1,0)
+                        
                     if self.start_marker_pos == self.end_marker_pos-1:
-                        content = list(self.content.replace(self.start_marker_text,"").replace(self.end_marker_text,""))
+                        content = list(self.remove_marker_text(self.content))
                         self.reset_marker_values()
                         self.caret_pos -=1
 
+                
                 else:
-                    if self.end_marker_is_set and self.caret_pos > self.end_marker_pos:
-                        self.caret_pos -=2
-
-                    elif self.end_marker_is_set and self.start_marker_pos < self.caret_pos < self.end_marker_pos:
-                        self.caret_pos -=1
-
-                    content = list(self.content.replace(self.start_marker_text,"").replace(self.end_marker_text,""))
-
-                    self.start_marker_pos = self.caret_pos-1
-                    content.insert(self.caret_pos-1, self.start_marker_text)
-                    self.start_marker_is_set = True
-
-                    self.end_marker_pos = self.caret_pos+1
-                    content.insert(self.caret_pos+1, self.end_marker_text)
-                    self.end_marker_is_set = True
-
+                    content = self.marker_set_else_code(0)
                 self.caret_pos -= 1
+
                 content = "".join(content)
 
                 #Update Screen
@@ -292,38 +319,19 @@ init 999 python:
                     )
                 ):
                     if self.caret_pos == self.start_marker_pos:
-                        content = list(self.content.replace(self.start_marker_text,""))
-                        content.insert(self.start_marker_pos+1, self.start_marker_text)
-                        self.start_marker_pos += 1
+                        content = self.process_set_marker_pos(0,1)
 
                     elif self.caret_pos == self.end_marker_pos:
-                        content = list(self.content.replace(self.end_marker_text,""))
-                        content.insert(self.end_marker_pos+1, self.end_marker_text)
-                        self.end_marker_pos += 1
+                        content = self.process_set_marker_pos(1,1)
 
                     if self.start_marker_pos == self.end_marker_pos-1:
-                        content = list(self.content.replace(self.start_marker_text,"").replace(self.end_marker_text,""))
+                        content = list(self.remove_marker_text(self.content))
                         self.reset_marker_values()
 
                     self.caret_pos += 1
 
                 else:
-                    if self.end_marker_is_set and self.caret_pos > self.end_marker_pos:
-                        self.caret_pos -=2
-
-                    elif self.end_marker_is_set and self.start_marker_pos < self.caret_pos < self.end_marker_pos:
-                        self.caret_pos -=1
-
-                    content = list(self.content.replace(self.start_marker_text,"").replace(self.end_marker_text,""))
-
-                    self.start_marker_pos = self.caret_pos
-                    content.insert(self.caret_pos, self.start_marker_text)
-                    self.start_marker_is_set = True
-
-                    self.end_marker_pos = self.caret_pos+2
-                    content.insert(self.caret_pos+2, self.end_marker_text)
-                    self.end_marker_is_set = True
-
+                    content = self.marker_set_else_code(1)  
                     self.caret_pos += 2
                 content = "".join(content)
 
@@ -347,7 +355,7 @@ init 999 python:
 
                 #Update Screen
                 self.update_text(content, self.editable, check_size=True)
-                #readjust the end pos to its true position so backspace and delete can erase everything
+                #Re-adjust the end pos to its true position so backspace and delete can erase everything
                 self.end_marker_pos = len(self.content)
                 renpy.display.render.redraw(self, 0)
                 raise renpy.display.core.IgnoreEvent()
@@ -407,4 +415,3 @@ init 999 python:
             raise renpy.display.core.IgnoreEvent()
 
     setattr(renpy.display.behavior.Input, 'event', event_ov)
-
