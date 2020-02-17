@@ -8,6 +8,8 @@ init 1 python:
     config.keymap['input_copy'] = ['ctrl_K_c']
     config.keymap['input_cut'] = ['ctrl_K_x']
     config.keymap['input_select_all'] = ['ctrl_K_a']
+    config.keymap['input_single_backspace'] = ['ctrl_K_BACKSPACE', 'ctrl_repeat_K_BACKSPACE']
+    config.keymap['input_single_delete'] = ['ctrl_K_DELETE', 'ctrl_repeat_K_DELETE']
 
     # Allows you to use CRTL + arrow keys to move the markers
     # NOTE: the windows shortcut is shift + arrow keys but we can't use shift shortcuts in console
@@ -136,9 +138,9 @@ init 999 python:
                 content_removed_markers = self.remove_marker_text(self.content)
                 copy_content = content_removed_markers[self.start_marker_pos : self.end_marker_pos-1]
                 pygame.scrap.put(pygame.SCRAP_TEXT,copy_content)
-                if cut: 
+                if cut:
                     #Removes cut content from string that will be sent to the screen
-                    cut_content = "{0}{1}{2}".format(content_removed_markers[0:self.start_marker_pos], "", content_removed_markers[self.end_marker_pos-1:len(content_removed_markers)])
+                    cut_content = "{0}{1}{2}".format(content_removed_markers[0:self.start_marker_pos], "", content_removed_markers[self.end_marker_pos-1:len(self.content)])
 
                     #Update Display
                     self.caret_pos = self.start_marker_pos
@@ -148,7 +150,7 @@ init 999 python:
                     #Update Display
                     self.update_text(content_removed_markers, self.editable, check_size=True)
                     #Reset
-                    self.reset_marker_values()
+                self.reset_marker_values()
         else:
             self.reset_screen_markers()
             
@@ -181,13 +183,22 @@ init 999 python:
                 if (
                     self.start_marker_is_set
                     and self.end_marker_is_set
-                    and self.start_marker_pos == 0
-                    and self.end_marker_pos == l
                 ):
-                    content = self.content[0:0]
-                    self.caret_pos = self.start_marker_pos
-                    self.reset_marker_values()
+                    if (
+                        self.start_marker_pos == 0
+                        and self.end_marker_pos == l
+                    ):
+                        content = self.content[0:0]
+                        self.caret_pos = self.start_marker_pos
 
+                    else:
+                        content = self.content[0:self.start_marker_pos] + self.content[self.end_marker_pos+1:l]
+                        if self.start_marker_pos <= self.caret_pos <= self.end_marker_pos:
+                            self.caret_pos = self.start_marker_pos
+                        elif self.caret_pos > self.end_marker_pos:
+                            self.caret_pos -= (self.end_marker_pos - self.start_marker_pos)+1
+
+                    self.reset_marker_values()
                     #Updates Display
                     self.update_text(content, self.editable)
 
@@ -195,6 +206,34 @@ init 999 python:
                     content = self.content[0:self.caret_pos-1] + self.content[self.caret_pos:l]
                     self.caret_pos -= 1
                     self.update_text(content, self.editable)
+
+            renpy.display.render.redraw(self, 0)
+            raise renpy.display.core.IgnoreEvent()
+
+        elif map_event(ev, "input_single_backspace"):
+            if self.content and self.caret_pos > 0:
+                if (
+                    (self.start_marker_pos == 0 and self.caret_pos != self.start_marker_pos+1)
+                    or (self.end_marker_pos == l and self.caret_pos != self.end_marker_pos)
+                    or (self.caret_pos != self.start_marker_pos+1 and self.caret_pos != self.end_marker_pos+1)
+                    or not (self.start_marker_is_set and self.end_marker_is_set)
+                ):
+                    content = self.content[0:self.caret_pos-1] + self.content[self.caret_pos:l]
+                    if self.start_marker_pos < self.caret_pos <= self.end_marker_pos:
+                        self.end_marker_pos -=1
+                    elif self.caret_pos < self.start_marker_pos:
+                        self.start_marker_pos -=1
+                        self.end_marker_pos -=1
+
+                    self.caret_pos -= 1
+                    self.update_text(content, self.editable)
+
+                    if self.start_marker_pos == self.end_marker_pos-1:
+                        content = list(self.remove_marker_text(self.content))
+                        self.reset_marker_values()
+                        self.caret_pos -= 1
+                        content = "".join(content)
+                        self.update_text(content, self.editable)
 
             renpy.display.render.redraw(self, 0)
             raise renpy.display.core.IgnoreEvent()
@@ -229,37 +268,70 @@ init 999 python:
             raise renpy.display.core.IgnoreEvent()
 
         elif map_event(ev, "input_delete"):
-            if (
-                self.start_marker_is_set
-                and self.end_marker_is_set
-                and self.start_marker_pos == 0
-                and self.end_marker_pos == l
-            ):
-                content = self.content[0:0]
-                self.caret_pos = self.start_marker_pos
-                self.reset_marker_values()
+            if self.content:
+                if (
+                    self.start_marker_is_set
+                    and self.end_marker_is_set
+                ):
+                    if (
+                        self.start_marker_pos == 0
+                        and self.end_marker_pos == l
+                    ):
+                        content = self.content[0:0]
+                        self.caret_pos = self.start_marker_pos
 
-                #Updates Display
-                self.update_text(content, self.editable)
+                    else:
+                        content = self.content[0:self.start_marker_pos] + self.content[self.end_marker_pos+1:l]
+                        if self.start_marker_pos <= self.caret_pos <= self.end_marker_pos:
+                            self.caret_pos = self.start_marker_pos
+                        elif self.caret_pos > self.end_marker_pos:
+                            self.caret_pos -= (self.end_marker_pos - self.start_marker_pos)+1
 
-            elif self.caret_pos < l:
-                content = self.content[0:self.caret_pos] + self.content[self.caret_pos+1:l]
-                self.update_text(content, self.editable)
+                    self.reset_marker_values()
+                    #Updates Display
+                    self.update_text(content, self.editable)
+
+                elif self.caret_pos < l:
+                    content = self.content[0:self.caret_pos] + self.content[self.caret_pos+1:l]
+                    self.update_text(content, self.editable)
+
+                renpy.display.render.redraw(self, 0)
+                raise renpy.display.core.IgnoreEvent()
+
+        elif map_event(ev, "input_single_delete"):
+            if self.content and self.caret_pos < l:
+                if (
+                    (self.start_marker_pos == 0 and self.caret_pos != self.start_marker_pos)
+                    or (self.end_marker_pos == l and self.caret_pos != self.end_marker_pos-1)
+                    or (self.caret_pos != self.start_marker_pos and self.caret_pos != self.end_marker_pos)
+                    or not (self.start_marker_is_set and self.end_marker_is_set)
+                ):
+                    content = self.content[0:self.caret_pos] + self.content[self.caret_pos+1:l]
+                    if self.start_marker_pos < self.caret_pos <= self.end_marker_pos:
+                        self.end_marker_pos -=1
+                    elif self.caret_pos < self.start_marker_pos:
+                        self.start_marker_pos -=1
+                        self.end_marker_pos -=1
+
+                    self.update_text(content, self.editable)
+
+                    if self.start_marker_pos == self.end_marker_pos-1:
+                        content = list(self.remove_marker_text(self.content))
+                        self.reset_marker_values()
+                        self.caret_pos -= 1
+                        content = "".join(content)
+                        self.update_text(content, self.editable)
 
             renpy.display.render.redraw(self, 0)
             raise renpy.display.core.IgnoreEvent()
-        
 
         elif map_event(ev, "input_paste"):
-            content = self.content[0:self.caret_pos] + pygame.scrap.get(pygame.SCRAP_TEXT) + self.content[self.caret_pos:l]
+            
             if self.start_marker_is_set and self.end_marker_is_set:
-                if self.caret_pos < self.start_marker_pos:
-                    self.start_marker_pos += len(pygame.scrap.get(pygame.SCRAP_TEXT))
-                    self.end_marker_pos += len(pygame.scrap.get(pygame.SCRAP_TEXT))-1
-                elif self.start_marker_pos < self.caret_pos < self.end_marker_pos:
-                    self.end_marker_pos += len(pygame.scrap.get(pygame.SCRAP_TEXT))-1
-                else:
-                    self.end_marker_pos -= 1
+                content = self.content[0:self.start_marker_pos] + pygame.scrap.get(pygame.SCRAP_TEXT) + self.content[self.end_marker_pos+1:l]
+                self.reset_marker_values()
+            else:
+                content = self.content[0:self.caret_pos] + pygame.scrap.get(pygame.SCRAP_TEXT) + self.content[self.caret_pos:l]
             self.caret_pos += len(pygame.scrap.get(pygame.SCRAP_TEXT))
             self.update_text(content, self.editable, check_size=True)
 
