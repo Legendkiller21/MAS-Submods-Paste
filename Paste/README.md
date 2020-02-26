@@ -2,11 +2,11 @@ Install:
 - Just drop into the game folder
 
 Controls:
-- Copy (CTRL + C)
-- Paste (CTR: + V)
-- Cut (CTRL + X)
-- Select All (CTRL + A)
-- Sub-Select (CTRL + Left_Arrow/Right Arrow)
+- Copy (CTRL + c)
+- Paste (CTR: + v)
+- Cut (CTRL + x)
+- Select All (CTRL + a)
+- Sub-Select (CTRL + Left Arrow/Right Arrow)
 
 Credits:
 - Original Paste code and Sub-Selections v2 by LegendKiller21
