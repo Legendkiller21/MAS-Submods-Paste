@@ -479,6 +479,11 @@ init 999 python:
 
             if text:
 
+                content = self.content[0:self.caret_pos] + text + self.content[self.caret_pos:l]
+                self.caret_pos += len(text)
+
+                self.update_text(content, self.editable, check_size=True)
+
                 if (
                     self.start_marker_is_set
                     and self.end_marker_is_set
@@ -487,29 +492,20 @@ init 999 python:
                         self.start_marker_pos == 0
                         and self.end_marker_pos == l
                     ):
-                        content = self.content[0:0]
-                        self.caret_pos = self.start_marker_pos
-
-                        self.reset_marker_values()
-
-                        self.update_text(content, self.editable)
+                        if self.caret_pos == 1:
+                            self.start_marker_pos += 1
+                            self.end_marker_pos += 1
+                        elif self.caret_pos <= self.end_marker_pos:
+                            self.end_marker_pos += 1
+                        else:
+                            self.end_marker_pos -= 1
 
                     elif self.start_marker_pos <= self.caret_pos <= self.end_marker_pos:
-                        content = self.content[0:self.start_marker_pos] + self.content[self.end_marker_pos+1:l]
-                        self.caret_pos = self.start_marker_pos
-
-                        self.reset_marker_values()
-
-                        self.update_text(content, self.editable)
+                        self.end_marker_pos += 1
 
                     elif self.caret_pos < self.start_marker_pos:
                         self.start_marker_pos += 1
                         self.end_marker_pos += 1
-
-                content = self.content[0:self.caret_pos] + text + self.content[self.caret_pos:l]
-                self.caret_pos += len(text)
-
-                self.update_text(content, self.editable, check_size=True)
 
             raise renpy.display.core.IgnoreEvent()
 
