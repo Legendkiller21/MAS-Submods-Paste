@@ -479,6 +479,33 @@ init 999 python:
 
             if text:
 
+                if (
+                    self.start_marker_is_set
+                    and self.end_marker_is_set
+                ):
+                    if (
+                        self.start_marker_pos == 0
+                        and self.end_marker_pos == l
+                    ):
+                        content = self.content[0:0]
+                        self.caret_pos = self.start_marker_pos
+
+                        self.reset_marker_values()
+
+                        self.update_text(content, self.editable)
+
+                    elif self.start_marker_pos <= self.caret_pos <= self.end_marker_pos:
+                        content = self.content[0:self.start_marker_pos] + self.content[self.end_marker_pos+1:l]
+                        self.caret_pos = self.start_marker_pos
+
+                        self.reset_marker_values()
+
+                        self.update_text(content, self.editable)
+
+                    elif self.caret_pos < self.start_marker_pos:
+                        self.start_marker_pos += 1
+                        self.end_marker_pos += 1
+
                 content = self.content[0:self.caret_pos] + text + self.content[self.caret_pos:l]
                 self.caret_pos += len(text)
 
@@ -487,3 +514,4 @@ init 999 python:
             raise renpy.display.core.IgnoreEvent()
 
     setattr(renpy.display.behavior.Input, 'event', event_ov)
+
