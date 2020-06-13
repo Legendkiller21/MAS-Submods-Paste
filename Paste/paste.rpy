@@ -17,7 +17,7 @@ init 1 python:
     config.keymap['input_move_end_marker_pos'] = ['ctrl_K_RIGHT', 'ctrl_repeat_K_RIGHT']
 
 init 999 python:
-
+    import pygame
     #Sets new Input class variables
     setattr(renpy.display.behavior.Input, 'start_marker_pos', 0)
     setattr(renpy.display.behavior.Input, 'end_marker_pos', 0)
