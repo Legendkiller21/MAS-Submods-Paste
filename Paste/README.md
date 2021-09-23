@@ -1,5 +1,6 @@
 Install:
-- Just drop into the game folder
+- Open the zip file from the release
+- Copy the `game/` folder inside the zip to the `DDLC/` folder (the folder with the DDLC exe in it) and **MERGE** the folders
 
 Controls:
 - Copy (CTRL + c)
